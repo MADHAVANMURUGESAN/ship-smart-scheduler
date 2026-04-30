@@ -1,7 +1,8 @@
-import { Component,inject  } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
-import { RouterLink } from "@angular/router";
+import { Router, RouterLink } from '@angular/router';
+import { AuthService } from '../../../core/services/auth.service';
 
 @Component({
   selector: 'app-login',
@@ -11,9 +12,9 @@ import { RouterLink } from "@angular/router";
   styleUrls: ['./login.scss']
 })
 export class LoginComponent {
-
- // constructor(private fb: FormBuilder) {}
   private fb = inject(FormBuilder);
+  private authService = inject(AuthService);
+  private router = inject(Router);
 
   loginForm = this.fb.group({
     email: ['', [Validators.required, Validators.email]],
@@ -22,7 +23,21 @@ export class LoginComponent {
 
   onSubmit() {
     if (this.loginForm.valid) {
-      console.log(this.loginForm.value);
+      const loginData = {
+        email: this.loginForm.value.email!,
+        password: this.loginForm.value.password!
+      };
+
+      this.authService.login(loginData).subscribe({
+        next: (response) => {
+          console.log('Login successful', response);
+          this.router.navigate(['/dashboard']);
+        },
+        error: (err) => {
+          console.error('Login failed', err);
+          alert('Login failed. Please check your credentials.');
+        }
+      });
     }
   }
 }

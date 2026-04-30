@@ -1,33 +1,29 @@
-import { Component } from '@angular/core';
-import { FormGroup, FormBuilder, Validators } from '@angular/forms';
-import { HttpClient } from '@angular/common/http';
+import { Component, inject } from '@angular/core';
+import { FormGroup, FormBuilder, Validators, ReactiveFormsModule, FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
-import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
+import { AuthService } from '../../../core/services/auth.service';
+
 @Component({
   selector: 'app-register',
   templateUrl: './register.html',
   styleUrls: ['./register.scss'],
-  standalone: true, // Angular 15+ standalone component
+  standalone: true,
   imports: [CommonModule, ReactiveFormsModule, RouterLink, FormsModule],
 })
 export class RegisterComponent {
-  registerForm: FormGroup;
+  private fb = inject(FormBuilder);
+  private authService = inject(AuthService);
+  private router = inject(Router);
 
-  constructor(
-    private http: HttpClient,
-    private router: Router,
-    private fb: FormBuilder
-  ) {
-    this.registerForm = this.fb.group({
-      email: ['', [Validators.required, Validators.email]],
-      name: ['', [Validators.required]], // ✅ removed invalid Validators.name
-      password: ['', [Validators.required, Validators.minLength(8)]], // ✅ array
-      confirmPassword: ['', [Validators.required, Validators.minLength(8)]],
-    }, { validators: this.passwordMatchValidator });
-  }
+  registerForm: FormGroup = this.fb.group({
+    email: ['', [Validators.required, Validators.email]],
+    name: ['', [Validators.required]],
+    phoneNumber: ['', [Validators.required]],
+    password: ['', [Validators.required, Validators.minLength(8)]],
+    confirmPassword: ['', [Validators.required, Validators.minLength(8)]],
+  }, { validators: this.passwordMatchValidator });
 
-  // ✅ Custom validator for password match
   passwordMatchValidator(form: FormGroup) {
     const password = form.get('password')?.value;
     const confirmPassword = form.get('confirmPassword')?.value;
@@ -36,26 +32,24 @@ export class RegisterComponent {
 
   onSubmit() {
     if (this.registerForm.valid) {
-      console.log(this.registerForm.value);
+      const { name, email, password, phoneNumber } = this.registerForm.value;
+      const registerData = { 
+        fullName: name, 
+        email, 
+        password, 
+        phoneNumber 
+      };
+
+      this.authService.register(registerData).subscribe({
+        next: () => {
+          alert('Registration successful');
+          this.router.navigate(['/login']);
+        },
+        error: (err) => {
+          console.error('Registration failed', err);
+          alert('Registration failed. Please try again.');
+        },
+      });
     }
-  }
-
-  onRegister() {
-    if (!this.registerForm.valid) return;
-
-    const { name, email, password } = this.registerForm.value;
-
-    const payload = { name, email, password };
-
-    this.http.post('/api/register', payload).subscribe({
-      next: () => {
-        alert('Registration successful');
-        this.router.navigate(['/login']);
-      },
-      error: (err) => {
-        console.error('Registration failed', err);
-        alert('Registration failed. Please try again.');
-      },
-    });
   }
 }
